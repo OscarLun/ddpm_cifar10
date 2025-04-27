@@ -1,0 +1,20 @@
+name: denoising-diffusion
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.8
+  - pytorch>=2.0
+  - torchvision
+  - accelerate
+  - einops
+  - numpy
+  - pillow
+  - scipy
+  - tqdm
+  - pip
+  - pip:
+    - ema-pytorch>=0.4.2
+    - pytorch-fid
+    - toml
+    - wandb==0.17.3
