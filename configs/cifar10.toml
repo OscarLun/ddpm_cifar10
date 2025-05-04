@@ -11,7 +11,7 @@ beta_schedule = "linear"
 [trainer_params]
 folder = "./data"
 train_lr = 1e-4
-train_batch_size = 16
+train_batch_size = 128
 train_num_steps = 100000
 save_and_sample_every = 1000
 num_samples = 25

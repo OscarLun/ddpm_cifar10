@@ -304,7 +304,9 @@ class Trainer:
         inception_block_idx = 2048,
         max_grad_norm = 1.,
         num_fid_samples = 50000,
-        save_best_and_latest_only = False
+        save_best_and_latest_only = False,
+        wandb_logger,
+        device = torch.device('cpu')
     ):
         super().__init__()
 
@@ -312,8 +314,12 @@ class Trainer:
 
         self.accelerator = Accelerator(
             split_batches = split_batches,
-            mixed_precision = mixed_precision_type if amp else 'no'
+            mixed_precision = mixed_precision_type if amp else 'no',
         )
+
+        self.device = device
+
+        self.wandb_logger = wandb_logger
 
         # model
 
@@ -407,29 +413,15 @@ class Trainer:
                 inception_block_idx=inception_block_idx
             )
 
-        # Initialize wandb, MOVE to main file
-        self.wandb_logger = wandb.init(
-            project="denoising-diffusion-test",  # Replace with your project name
-            config={
-                "batch_size": train_batch_size,
-                "gradient_accumulate_every": gradient_accumulate_every,
-                "learning_rate": train_lr,
-                "train_num_steps": train_num_steps,
-                "ema_decay": ema_decay,
-                "image_size": diffusion_model.image_size,
-                "num_samples": num_samples,
-            }
-        )
-
         if save_best_and_latest_only:
             assert calculate_fid, "`calculate_fid` must be True to provide a means for model evaluation for `save_best_and_latest_only`."
             self.best_fid = 1e10 # infinite
 
         self.save_best_and_latest_only = save_best_and_latest_only
 
-    @property
-    def device(self):
-        return self.accelerator.device
+    # @property
+    # def device(self):
+    #     return self.accelerator.device
 
     def save(self, milestone):
         if not self.accelerator.is_local_main_process:

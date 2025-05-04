@@ -22,6 +22,9 @@ ModelPrediction =  namedtuple('ModelPrediction', ['pred_noise', 'pred_x_start'])
 
 # gaussian diffusion trainer class
 
+def identity(t, *args, **kwargs):
+    return t
+
 def extract(a, t, x_shape):
     b, *_ = t.shape
     out = a.gather(-1, t)
@@ -79,7 +82,8 @@ class GaussianDiffusion(Module):
         offset_noise_strength = 0.,  # https://www.crosslabs.org/blog/diffusion-with-offset-noise
         min_snr_loss_weight = False, # https://arxiv.org/abs/2303.09556
         min_snr_gamma = 5,
-        immiscible = False
+        immiscible = False,
+        device=torch.device('cpu'),
     ):
         super().__init__()
         assert not (type(self) == GaussianDiffusion and model.channels != model.out_dim)
@@ -186,9 +190,11 @@ class GaussianDiffusion(Module):
         self.normalize = normalize_to_neg_one_to_one if auto_normalize else identity
         self.unnormalize = unnormalize_to_zero_to_one if auto_normalize else identity
 
-    @property
-    def device(self):
-        return self.betas.device
+        self.device = device
+
+    # @property
+    # def device(self):
+    #     return self.betas.device
 
     def predict_start_from_noise(self, x_t, t, noise):
         return (
