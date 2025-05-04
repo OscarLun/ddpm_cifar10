@@ -1,6 +1,9 @@
 # Generation results
 results/
 
+# Wandb
+wandb/
+
 # Data files
 data/
 
