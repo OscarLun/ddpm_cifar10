@@ -100,12 +100,11 @@ class Trainer:
 
         self.opt = Adam(diffusion_model.parameters(), lr = train_lr, betas = adam_betas)
 
-        # for logging results in a folder periodically
-
         if self.accelerator.is_main_process:
             self.ema = EMA(diffusion_model, beta = ema_decay, update_every = ema_update_every)
             self.ema.to(self.device)
 
+        # for logging results in a folder periodically
         self.results_folder = Path(results_folder)
         self.results_folder.mkdir(exist_ok = True)
 

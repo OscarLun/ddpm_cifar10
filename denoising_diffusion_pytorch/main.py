@@ -2,6 +2,7 @@ import torch
 import argparse
 import toml
 import wandb
+import time
 
 from models.unet import Unet
 from diffusion.gaussian_diffusion import GaussianDiffusion
@@ -72,6 +73,10 @@ def main():
 )
 
     # Initialize Trainer
+    results_folder=trainer_config["results_folder"]
+    current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+    current_results_folder = f"{results_folder}/{args.exp_name}_{current_time}"
+
     trainer = Trainer(
         diffusion_model=diffusion,
         dataset=dataset,
@@ -81,7 +86,7 @@ def main():
         train_num_steps=trainer_config["train_num_steps"],
         save_and_sample_every=trainer_config["save_and_sample_every"],
         num_samples=trainer_config["num_samples"],
-        results_folder=trainer_config["results_folder"],
+        results_folder=current_results_folder,
         wandb_logger=wandb_logger,
         device=device,
 	calculate_fid=False
