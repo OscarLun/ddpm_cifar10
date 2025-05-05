@@ -164,9 +164,16 @@ class Trainer:
             'version': __version__
         }
 
-        if milestone > 0:
-            data['milestone'] = milestone
-        torch.save(data, str(self.results_folder / f'model-{milestone}.pt'))
+        # Save the current checkpoint
+        checkpoint_path = self.results_folder / f'model-{milestone}.pt'
+        torch.save(data, str(checkpoint_path))
+
+        # Remove the previous checkpoint if it exists
+        if milestone > 1:
+            previous_checkpoint_path = self.results_folder / f'model-{milestone - 1}.pt'
+            if previous_checkpoint_path.exists():
+                previous_checkpoint_path.unlink()  # Deletes the file
+            
 
     def load(self, milestone):
         accelerator = self.accelerator

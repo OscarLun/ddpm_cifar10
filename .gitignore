@@ -7,6 +7,9 @@ wandb/
 # Data files
 data/
 
+# Config files
+config/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

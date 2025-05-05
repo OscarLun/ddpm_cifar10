@@ -13,8 +13,8 @@ folder = "./data"
 train_lr = 5e-5
 train_batch_size = 64
 train_num_steps = 100000
-save_and_sample_every = 5000
-num_samples = 25
+save_and_sample_every = 1
+num_samples = 1
 results_folder = "./results"
 
 [sample]
