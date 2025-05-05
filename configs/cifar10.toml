@@ -11,13 +11,16 @@ beta_schedule = "linear"
 [trainer_params]
 folder = "./data"
 train_lr = 5e-5
-train_batch_size = 64
-train_num_steps = 100000
+train_batch_size = 128
+train_num_steps = 50000
 save_and_sample_every = 5000
-num_samples = 10
+num_samples = 16
 results_folder = "./results"
 load_milestone = 0
-load_path = "results/ddpm_cifar10_2025-05-05_18-24-31"
+load_path = None
+
+[subset_params]
+subset_sizes = [4000, 8000, 12000]
 
 [sample]
-batch_size = 20
+batch_size = 25
