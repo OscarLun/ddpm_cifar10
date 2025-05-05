@@ -89,7 +89,9 @@ def main():
         results_folder=current_results_folder,
         wandb_logger=wandb_logger,
         device=device,
-	calculate_fid=False
+	    calculate_fid=False,
+        load_milestone=trainer_config["load_milestone"],
+        load_path=trainer_config["load_path"],
     )
 
     # Start training

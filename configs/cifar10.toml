@@ -13,9 +13,11 @@ folder = "./data"
 train_lr = 5e-5
 train_batch_size = 64
 train_num_steps = 100000
-save_and_sample_every = 1
-num_samples = 1
+save_and_sample_every = 5000
+num_samples = 10
 results_folder = "./results"
+load_milestone = 0
+load_path = "results/ddpm_cifar10_2025-05-05_18-24-31"
 
 [sample]
 batch_size = 20

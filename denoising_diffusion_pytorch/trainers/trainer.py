@@ -43,7 +43,9 @@ class Trainer:
         num_fid_samples = 50000,
         save_best_and_latest_only = False,
         wandb_logger,
-        device = torch.device('cpu')
+        device = torch.device('cpu'),
+        load_milestone = 0,
+        load_path = None,
     ):
         super().__init__()
 
@@ -116,6 +118,17 @@ class Trainer:
 
         self.model, self.opt = self.accelerator.prepare(self.model, self.opt)
 
+        # load milestone
+        self.load_milestone = load_milestone
+
+        # load path
+        self.load_path = load_path
+
+        # load model if milestone is provided
+        if self.load_milestone > 0:
+            self.load(self.load_milestone, load_path = self.load_path)
+
+
         # FID-score computation
 
         self.calculate_fid = calculate_fid and self.accelerator.is_main_process
@@ -175,25 +188,44 @@ class Trainer:
                 previous_checkpoint_path.unlink()  # Deletes the file
             
 
-    def load(self, milestone):
+    def load(self, milestone, load_path=None):
+        if milestone == 0:
+            return
+
         accelerator = self.accelerator
         device = accelerator.device
 
-        data = torch.load(str(self.results_folder / f'model-{milestone}.pt'), map_location=device, weights_only=True)
+        try: 
+            # Either load from the specified path or the default path
+            if load_path is not None:
+                data_path = Path(load_path) / f'model-{milestone}.pt'
+            else:
+                data_path = self.results_folder / f'model-{milestone}.pt'
 
-        model = self.accelerator.unwrap_model(self.model)
-        model.load_state_dict(data['model'])
+            # Check if the file exists
+            if not data_path.exists():
+                raise FileNotFoundError(f"Checkpoint file not found: {data_path}")
+            
+            data = torch.load(str(data_path), map_location=device, weights_only=True)
+            
+            print(f"Loading model from {data_path}")
 
-        self.step = data['step']
-        self.opt.load_state_dict(data['opt'])
-        if self.accelerator.is_main_process:
-            self.ema.load_state_dict(data["ema"])
+            model = self.accelerator.unwrap_model(self.model)
+            model.load_state_dict(data['model'])
 
-        if 'version' in data:
-            print(f"loading from version {data['version']}")
+            self.step = data['step']
+            self.opt.load_state_dict(data['opt'])
+            if self.accelerator.is_main_process:
+                self.ema.load_state_dict(data["ema"])
 
-        if exists(self.accelerator.scaler) and exists(data['scaler']):
-            self.accelerator.scaler.load_state_dict(data['scaler'])
+            if 'version' in data:
+                print(f"loading from version {data['version']}")
+
+            if exists(self.accelerator.scaler) and exists(data['scaler']):
+                self.accelerator.scaler.load_state_dict(data['scaler'])
+
+        except FileNotFoundError as e:
+            accelerator.print(f"Checkpoint not found: {e}")
 
     def train(self):
         accelerator = self.accelerator
