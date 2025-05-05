@@ -1,6 +1,6 @@
 [unet_params]
 dim = 64
-dim_mults = [1, 2, 4]
+dim_mults = [1, 2, 4, 8]
 channels = 3
 
 [diffusion_params]
@@ -10,10 +10,10 @@ beta_schedule = "linear"
 
 [trainer_params]
 folder = "./data"
-train_lr = 1e-4
-train_batch_size = 128
+train_lr = 5e-5
+train_batch_size = 64
 train_num_steps = 100000
-save_and_sample_every = 1000
+save_and_sample_every = 5000
 num_samples = 25
 results_folder = "./results"
 

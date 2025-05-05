@@ -66,6 +66,7 @@ def main():
         results_folder=trainer_config["results_folder"],
         wandb_logger=wandb_logger,
         device=device,
+	calculate_fid=False
     )
 
     # Start training

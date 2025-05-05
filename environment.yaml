@@ -1,14 +1,18 @@
-name: denoising-diffusion
+name: ddiff
 channels:
-  - conda-forge
   - pytorch
+  - nvidia
+ # - conda-forge
+  - defaults
 dependencies:
   - python=3.10
-  - pytorch>=2.0
-  - torchvision
+  - pytorch=2.0.1
+  - torchvision==0.15.2
+  - torchaudio==2.0.2
+  - pytorch-cuda=11.7
   - accelerate
   - einops
-  - numpy
+  - numpy<2
   - pillow
   - scipy
   - tqdm
@@ -18,3 +22,5 @@ dependencies:
     - pytorch-fid
     - toml
     - wandb==0.17.3
+
+
