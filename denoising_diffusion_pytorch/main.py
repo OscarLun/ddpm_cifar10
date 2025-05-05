@@ -2,9 +2,13 @@ import torch
 import argparse
 import toml
 import wandb
+
 from models.unet import Unet
 from diffusion.gaussian_diffusion import GaussianDiffusion
 from trainers.trainer import Trainer
+
+from torchvision.datasets import CIFAR10
+from torchvision.transforms import Compose, ToTensor
 
 def main():
     # Parse command line arguments
@@ -53,10 +57,24 @@ def main():
         },
     )
 
-    # Initialize Trainer
+    # Load trainer configuration
     trainer_config = config["trainer_params"]
+    
+    # Load dataset
+    dataset = CIFAR10(
+    root=trainer_config["folder"],
+    train=True,
+    download=True,
+    transform=Compose([
+        ToTensor(),
+#        Normalize((0.5,), (0.5,))  # Normalize to [-1, 1]
+    ])
+)
+
+    # Initialize Trainer
     trainer = Trainer(
         diffusion_model=diffusion,
+        dataset=dataset,
         folder=trainer_config["folder"],
         train_batch_size=trainer_config["train_batch_size"],
         train_lr=trainer_config["train_lr"],
