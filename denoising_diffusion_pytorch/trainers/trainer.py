@@ -199,7 +199,7 @@ class Trainer:
 
         # Remove the previous checkpoint if it exists
         if milestone > 1:
-            previous_checkpoint_path = self.results_folder / f'model-{milestone - 1}.pt'
+            previous_checkpoint_path = self.results_folder / f'model-{milestone - self.save_and_sample_every}.pt'
             if previous_checkpoint_path.exists():
                 previous_checkpoint_path.unlink()  # Deletes the file
             
@@ -293,7 +293,8 @@ class Trainer:
                         self.ema.ema_model.eval()
 
                         with torch.inference_mode():
-                            milestone = self.step // self.save_and_sample_every
+                            # milestone = self.step // self.save_and_sample_every
+                            milestone = self.step
                             batches = num_to_groups(self.num_samples, self.batch_size)
                             all_images_list = list(map(lambda n: self.ema.ema_model.sample(batch_size=n), batches))
 
