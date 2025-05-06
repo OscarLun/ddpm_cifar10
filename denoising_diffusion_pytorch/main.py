@@ -118,7 +118,11 @@ def main():
     else:
 
         # Start training
-        print("NEW training is started with subset size = ", subset_size)
+        if trainer_config["load_path"] is not None & trainer_config["load_milestone"] > 0:
+            print("Continue training from time step = ", trainer_config["load_milestone"])
+        else:
+            print("NEW training is started with subset size = ", subset_size)
+
         num_params = sum(p.numel() for p in diffusion.parameters())
         print("The number of parameters = ", num_params)
         trainer.train()
