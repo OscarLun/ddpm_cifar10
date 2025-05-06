@@ -5,7 +5,7 @@ from pathlib import Path
 from functools import partial
 from multiprocessing import cpu_count
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torch.optim import Adam
 from torchvision import transforms as T, utils
 
@@ -14,6 +14,19 @@ from accelerate import Accelerator
 from ema_pytorch import EMA
 from utils.helpers import exists, cycle, num_to_groups, has_int_squareroot, divisible_by
 from version import __version__
+
+class DatasetNoLabels(Dataset):
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __len__(self):
+        return len(self.dataset)
+    
+    def __getitem__(self, idx):
+        # Get the image and label from the dataset
+        image, _ = self.dataset[idx] # Ignore the label
+
+        return image
 
 class Trainer:
     def __init__(
@@ -89,7 +102,7 @@ class Trainer:
         # dataset and dataloader
 
         # self.ds = Dataset(folder, self.image_size, augment_horizontal_flip = augment_horizontal_flip, convert_image_to = convert_image_to)
-        self.ds = dataset
+        self.ds = DatasetNoLabels(dataset)
 
         assert len(self.ds) >= 100, 'you should have at least 100 images in your folder. at least 10k images recommended'
 
@@ -159,6 +172,9 @@ class Trainer:
             self.best_fid = 1e10 # infinite
 
         self.save_best_and_latest_only = save_best_and_latest_only
+
+        self.num_fid_samples = num_fid_samples
+        self.inception_block_idx = inception_block_idx
 
     # @property
     # def device(self):
@@ -242,8 +258,7 @@ class Trainer:
 
                 for _ in range(self.gradient_accumulate_every):
 
-                    # Discard labels, probably move somewhere else
-                    data, _ = next(self.dl)
+                    data = next(self.dl)
                     data = data.to(device)
 
                     with self.accelerator.autocast():
@@ -305,3 +320,25 @@ class Trainer:
                 pbar.update(1)
 
         accelerator.print('training complete')
+
+    def test(self, save_samples = False): 
+        from fid_evaluation import FIDEvaluation
+
+        if self.num_fid_samples > len(self.ds):
+            self.num_fid_samples = len(self.ds)
+
+        fid_scorer = FIDEvaluation(
+        batch_size=self.batch_size,
+        dl=self.dl,
+        sampler=self.ema.ema_model,
+        channels=self.channels,
+        accelerator=self.accelerator,
+        stats_dir=self.results_folder,
+        device=self.device,
+        num_fid_samples=self.num_fid_samples,
+        inception_block_idx=self.inception_block_idx
+        )
+        
+        fid_score = fid_scorer.fid_score(save_samples=save_samples)
+        self.accelerator.print(f'fid_score: {fid_score}')
+    

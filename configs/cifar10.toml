@@ -16,11 +16,13 @@ train_num_steps = 50000
 save_and_sample_every = 5000
 num_samples = 16
 results_folder = "./results"
+num_fid_samples = 10000
 load_milestone = 0
-load_path = None
+load_path = "None"
 
 [subset_params]
-subset_sizes = [4000, 8000, 12000]
+subset_size = 4000
 
 [sample]
-batch_size = 25
+pretrained_path = "None"
+batch_size = 32
