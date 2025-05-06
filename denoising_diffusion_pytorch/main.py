@@ -102,6 +102,7 @@ def main():
             "trainer_params": config["trainer_params"],
         },
         mode = "online" if args.mode == "train" else "disabled",
+        resume="allow",
     )
 
     
