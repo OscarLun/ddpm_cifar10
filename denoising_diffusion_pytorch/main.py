@@ -4,6 +4,7 @@ import toml
 import wandb
 import time
 import numpy as np
+import os
 
 from models.unet import Unet
 from diffusion.gaussian_diffusion import GaussianDiffusion
@@ -31,7 +32,21 @@ def main():
     # Load configuration
     config = toml.load('configs/cifar10.toml')
 
+    # Load trainer configuration
+    trainer_config = config["trainer_params"]
+
     subset_size = config["subset_params"]["subset_size"]
+
+    # Create a folder for results
+    results_folder=trainer_config["results_folder"]
+    current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+
+    if trainer_config["load_from_config"]:
+        current_results_folder = trainer_config["load_path"]
+    else:
+        current_results_folder = f"{results_folder}/{subset_size}_{current_time}"
+
+    os.makedirs(current_results_folder, exist_ok=True)
 
     # Load full dataset
     full_dataset = CIFAR10(
@@ -40,9 +55,22 @@ def main():
         download=True,
         transform=Compose([
             ToTensor(),
-    #        Normalize((0.5,), (0.5,))  # Normalize to [-1, 1]
         ])
     )
+
+    # Handle subset indices for training
+    subset_indices_file = "subset_indices.npy"
+    subset_indices_file = os.path.join(current_results_folder, subset_indices_file)
+
+    if os.path.exists(subset_indices_file) and config["trainer_params"]["load_path"] is not None:
+        # Load existing subset indices
+        subset_indices = np.load(subset_indices_file)
+        print(f"Loaded subset indices from {subset_indices_file}")
+    else:
+        # Generate new subset indices and save them
+        subset_indices = np.random.choice(len(full_dataset), size=subset_size, replace=False)
+        np.save(subset_indices_file, subset_indices)
+        print(f"Saved new subset indices to {subset_indices_file}")
 
     # Initialize U-Net model
     unet_config = config['unet_params']
@@ -76,22 +104,11 @@ def main():
         mode = "online" if args.mode == "train" else "disabled",
     )
 
-    # Load trainer configuration
-    trainer_config = config["trainer_params"]
     
     # Subset dataset 
-    subset_indices = np.random.choice(len(full_dataset), size=subset_size, replace=False)
     dataset = Subset(full_dataset, subset_indices)
 
     # Initialize Trainer
-    results_folder=trainer_config["results_folder"]
-    current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-
-    if trainer_config["load_path"] is not None:
-        current_results_folder = trainer_config["load_path"]
-    else:
-        current_results_folder = f"{results_folder}/{subset_size}_{current_time}"
-
     trainer = Trainer(
         diffusion_model=diffusion,
         dataset=dataset,
@@ -118,7 +135,7 @@ def main():
     else:
 
         # Start training
-        if trainer_config["load_path"] is not None & trainer_config["load_milestone"] > 0:
+        if trainer_config["load_from_config"]:
             print("Continue training from time step = ", trainer_config["load_milestone"])
         else:
             print("NEW training is started with subset size = ", subset_size)

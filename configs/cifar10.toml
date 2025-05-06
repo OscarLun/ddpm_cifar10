@@ -19,6 +19,7 @@ results_folder = "./results"
 num_fid_samples = 10000
 load_milestone = 0
 load_path = "None"
+load_from_config = false
 
 [subset_params]
 subset_size = 4000
