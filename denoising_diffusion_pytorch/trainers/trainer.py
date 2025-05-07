@@ -341,5 +341,11 @@ class Trainer:
         )
         
         fid_score = fid_scorer.fid_score(save_samples=save_samples)
+
+        # Save the FID score to a file in the results folder
+        fid_score_file = self.results_folder / "fid_score.txt"
+        with open(fid_score_file, "w") as f:
+            f.write(f"FID Score: {fid_score}\n")
+
         self.accelerator.print(f'fid_score: {fid_score}')
     
