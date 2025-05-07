@@ -48,10 +48,19 @@ def main():
 
     os.makedirs(current_results_folder, exist_ok=True)
 
-    # Load full dataset
-    full_dataset = CIFAR10(
+    # Load CIFAR-10 dataset
+    train_data = CIFAR10(
         root=config["trainer_params"]["folder"],
         train=True,
+        download=True,
+        transform=Compose([
+            ToTensor(),
+        ])
+    )
+
+    test_data = CIFAR10(
+        root=config["trainer_params"]["folder"],
+        train=False,
         download=True,
         transform=Compose([
             ToTensor(),
@@ -68,7 +77,7 @@ def main():
         print(f"Loaded subset indices from {subset_indices_file}")
     else:
         # Generate new subset indices and save them
-        subset_indices = np.random.choice(len(full_dataset), size=subset_size, replace=False)
+        subset_indices = np.random.choice(len(train_data), size=subset_size, replace=False)
         np.save(subset_indices_file, subset_indices)
         print(f"Saved new subset indices to {subset_indices_file}")
 
@@ -107,12 +116,13 @@ def main():
 
     
     # Subset dataset 
-    dataset = Subset(full_dataset, subset_indices)
+    dataset = Subset(train_data, subset_indices)
 
     # Initialize Trainer
     trainer = Trainer(
         diffusion_model=diffusion,
-        dataset=dataset,
+        train_data=dataset,
+        test_data=test_data,
         folder=trainer_config["folder"],
         train_batch_size=trainer_config["train_batch_size"],
         train_lr=trainer_config["train_lr"],
@@ -122,10 +132,13 @@ def main():
         results_folder=current_results_folder,
         wandb_logger=wandb_logger,
         device=device,
-        num_fid_samples=trainer_config["num_fid_samples"],
-        calculate_fid=False,
+        num_train_fid_samples=trainer_config["num_train_fid_samples"],
+        num_test_fid_samples=trainer_config["num_test_fid_samples"],
+        calculate_fid=True,
         load_milestone=trainer_config["load_milestone"],
         load_path=trainer_config["load_path"],
+        load_from_config=trainer_config["load_from_config"],
+        save_best_and_latest_only=True,
     )
 
     if args.mode == "test":

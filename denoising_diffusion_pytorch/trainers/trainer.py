@@ -8,6 +8,8 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from torch.optim import Adam
 from torchvision import transforms as T, utils
+from torchvision.datasets import CIFAR10
+from torchvision.transforms import Compose, ToTensor
 
 from tqdm.auto import tqdm
 from accelerate import Accelerator
@@ -32,7 +34,8 @@ class Trainer:
     def __init__(
         self,
         diffusion_model,
-        dataset,
+        train_data,
+        test_data,
         folder,
         *,
         train_batch_size = 16,
@@ -53,39 +56,36 @@ class Trainer:
         calculate_fid = True,
         inception_block_idx = 2048,
         max_grad_norm = 1.,
-        num_fid_samples = 50000,
+        num_train_fid_samples = 2000,
+        num_test_fid_samples = 10000,
         save_best_and_latest_only = False,
         wandb_logger,
         device = torch.device('cpu'),
         load_milestone = 0,
         load_path = None,
+        load_from_config = False,
     ):
         super().__init__()
 
         # accelerator
-
         self.accelerator = Accelerator(
             split_batches = split_batches,
             mixed_precision = mixed_precision_type if amp else 'no',
         )
 
         self.device = device
-
         self.wandb_logger = wandb_logger
 
         # model
-
         self.model = diffusion_model
         self.channels = diffusion_model.channels
         is_ddim_sampling = diffusion_model.is_ddim_sampling
 
         # default convert_image_to depending on channels
-
         if not exists(convert_image_to):
             convert_image_to = {1: 'L', 3: 'RGB', 4: 'RGBA'}.get(self.channels)
 
         # sampling and training hyperparameters
-
         assert has_int_squareroot(num_samples), 'number of samples must have an integer square root'
         self.num_samples = num_samples
         self.save_and_sample_every = save_and_sample_every
@@ -102,7 +102,7 @@ class Trainer:
         # dataset and dataloader
 
         # self.ds = Dataset(folder, self.image_size, augment_horizontal_flip = augment_horizontal_flip, convert_image_to = convert_image_to)
-        self.ds = DatasetNoLabels(dataset)
+        self.ds = DatasetNoLabels(train_data)
 
         assert len(self.ds) >= 100, 'you should have at least 100 images in your folder. at least 10k images recommended'
 
@@ -110,6 +110,13 @@ class Trainer:
 
         dl = self.accelerator.prepare(dl)
         self.dl = cycle(dl)
+
+        self.test_ds = DatasetNoLabels(test_data)
+
+        # Create a dataloader for the test dataset
+        test_dl = DataLoader(self.test_ds, batch_size=train_batch_size, shuffle=False, pin_memory=True, num_workers=cpu_count())
+        test_dl = self.accelerator.prepare(test_dl)
+        self.test_dl = cycle(test_dl)
 
         # optimizer
 
@@ -137,6 +144,9 @@ class Trainer:
         # load path
         self.load_path = load_path
 
+        # load from config
+        self.load_from_config = load_from_config
+
         # load model if milestone is provided
         if self.load_milestone > 0:
             self.load(self.load_milestone, load_path = self.load_path)
@@ -155,15 +165,15 @@ class Trainer:
                     "Consider using DDIM sampling to save time."
                 )
 
-            self.fid_scorer = FIDEvaluation(
+            self.fid_scorer_train = FIDEvaluation(
                 batch_size=self.batch_size,
-                dl=self.dl,
+                dl=self.test_dl,
                 sampler=self.ema.ema_model,
                 channels=self.channels,
                 accelerator=self.accelerator,
                 stats_dir=results_folder,
                 device=self.device,
-                num_fid_samples=num_fid_samples,
+                num_fid_samples=num_train_fid_samples,
                 inception_block_idx=inception_block_idx
             )
 
@@ -172,9 +182,14 @@ class Trainer:
             self.best_fid = 1e10 # infinite
 
         self.save_best_and_latest_only = save_best_and_latest_only
-
-        self.num_fid_samples = num_fid_samples
+        self.num_train_fid_samples = num_train_fid_samples
+        self.num_test_fid_samples = num_test_fid_samples
         self.inception_block_idx = inception_block_idx
+
+        # Create FID score to a file in the results folder
+        self.fid_score_file = self.results_folder / "fid_score.txt"
+
+
 
     # @property
     # def device(self):
@@ -197,6 +212,10 @@ class Trainer:
         checkpoint_path = self.results_folder / f'model-{milestone}.pt'
         torch.save(data, str(checkpoint_path))
 
+        # Break if milestone is not integer
+        if not isinstance(milestone, int):
+            return
+
         # Remove the previous checkpoint if it exists
         if milestone > 1:
             previous_checkpoint_path = self.results_folder / f'model-{milestone - self.save_and_sample_every}.pt'
@@ -205,7 +224,7 @@ class Trainer:
             
 
     def load(self, milestone, load_path=None):
-        if milestone == 0:
+        if not self.load_from_config:
             return
 
         accelerator = self.accelerator
@@ -305,12 +324,15 @@ class Trainer:
                         # whether to calculate fid
 
                         if self.calculate_fid:
-                            fid_score = self.fid_scorer.fid_score()
-                            accelerator.print(f'fid_score: {fid_score}')
+                            fid_score_train = self.fid_scorer_train.fid_score()
+                            accelerator.print(f'fid_score: {fid_score_train}')
+
+                            with open(self.fid_score_file, "a") as f:
+                                f.write(f"Model Step: {self.step}, FID Score: {fid_score_train}\n")
 
                         if self.save_best_and_latest_only:
-                            if self.best_fid > fid_score:
-                                self.best_fid = fid_score
+                            if self.best_fid > fid_score_train:
+                                self.best_fid = fid_score_train
                                 self.save("best")
                             self.save("latest")
                         else:
@@ -325,22 +347,22 @@ class Trainer:
     def test(self, save_samples = False): 
         from fid_evaluation import FIDEvaluation
 
-        if self.num_fid_samples > len(self.ds):
+        if self.num_train_fid_samples > len(self.ds):
             self.num_fid_samples = len(self.ds)
 
-        fid_scorer = FIDEvaluation(
+        fid_scorer_test = FIDEvaluation(
         batch_size=self.batch_size,
         dl=self.dl,
         sampler=self.ema.ema_model,
         channels=self.channels,
         accelerator=self.accelerator,
-        stats_dir=self.results_folder,
+        stats_dir=self.results_folder, # NEED UPDATE
         device=self.device,
         num_fid_samples=self.num_fid_samples,
         inception_block_idx=self.inception_block_idx
         )
         
-        fid_score = fid_scorer.fid_score(save_samples=save_samples)
+        fid_score = fid_scorer_test.fid_score(save_samples=save_samples)
 
         # Save the FID score to a file in the results folder
         fid_score_file = self.results_folder / "fid_score.txt"
