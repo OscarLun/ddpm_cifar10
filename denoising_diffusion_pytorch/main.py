@@ -35,6 +35,9 @@ def main():
     # Load trainer configuration
     trainer_config = config["trainer_params"]
 
+    # Load data folder
+    data_folder = config["trainer_params"]["folder"]
+
     subset_size = config["subset_params"]["subset_size"]
 
     # Create a folder for results
@@ -50,7 +53,7 @@ def main():
 
     # Load CIFAR-10 dataset
     train_data = CIFAR10(
-        root=config["trainer_params"]["folder"],
+        root=data_folder,
         train=True,
         download=True,
         transform=Compose([
@@ -59,7 +62,7 @@ def main():
     )
 
     test_data = CIFAR10(
-        root=config["trainer_params"]["folder"],
+        root=data_folder,
         train=False,
         download=True,
         transform=Compose([
@@ -67,25 +70,29 @@ def main():
         ])
     )
 
-    # Handle subset indices for trainin
-    subset_indices_folder = os.path.join(current_results_folder, "subset_indices")
-    subset_indices_file_train = "subset_indices_train.npy"
-    subset_indices_file_fid = "subset_indices_fid.npy"
-    subset_indices_file_train = os.path.join(subset_indices_folder, subset_indices_file_train)
-    subset_indices_file_fid = os.path.join(subset_indices_folder, subset_indices_file_fid)
+    fid_test_size = trainer_config["num_train_fid_samples"]
 
-    if os.path.exists(subset_indices_folder) and config["trainer_params"]["load_path"] is not None:
+    subset_indices_folder = os.path.join(data_folder, "subset_indices")
+    subset_indices_file_train = os.path.join(subset_indices_folder, f"subset_indices_{subset_size}.npy")
+    subset_indices_file_fid = os.path.join(subset_indices_folder, f"subset_indices_fid_{fid_test_size}.npy")
+
+    # Check if indices file exists
+    if os.path.exists(subset_indices_file_train) and os.path.exists(subset_indices_file_fid):
         # Load existing subset indices
         subset_indices_train = np.load(subset_indices_file_train)
         subset_indices_fid = np.load(subset_indices_file_fid)
         print(f"Loaded subset indices from {subset_indices_folder}")
     else:
-        # Generate new subset indices and save them
-        subset_indices_train = np.random.choice(len(train_data), size=subset_size, replace=False)
-        subset_indices_test = np.random.choice(len(test_data), size=config["trainer_params"]["num_train_fid_samples"], replace=False)
-        np.save(subset_indices_file_train, subset_indices_train)
-        print(f"Saved new subset indices to {subset_indices_file}")
+        raise FileNotFoundError(f"Subset indices files not found in {subset_indices_folder}. Please generate them first.")
 
+    # Check if the subset size is valid
+    if subset_size not in config["subset_params"]["subset_sizes"]:
+        raise ValueError(f"Subset size {subset_size} is not valid. Please choose from {config['subset_params']['subset_sizes']}.")
+    
+    # Subset dataset 
+    train_dataset = Subset(train_data, subset_indices_train)
+    test_dataset = Subset(test_data, subset_indices_fid)
+    
     # Initialize U-Net model
     unet_config = config['unet_params']
     model = Unet(
@@ -119,15 +126,11 @@ def main():
         resume="allow",
     )
 
-    
-    # Subset dataset 
-    dataset = Subset(train_data, subset_indices)
-
     # Initialize Trainer
     trainer = Trainer(
         diffusion_model=diffusion,
-        train_data=dataset,
-        test_data=test_data,
+        train_data=train_dataset,
+        test_data=test_dataset,
         folder=trainer_config["folder"],
         train_batch_size=trainer_config["train_batch_size"],
         train_lr=trainer_config["train_lr"],
