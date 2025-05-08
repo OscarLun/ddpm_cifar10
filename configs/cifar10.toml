@@ -24,6 +24,8 @@ load_from_config = false
 
 [subset_params]
 subset_size = 4000
+subset_sizes = [4000, 8000, 12000]
+num_train_fid_samples = 10
 
 [sample]
 pretrained_path = "None"

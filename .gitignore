@@ -10,6 +10,9 @@ data/
 # Config files
 #config/
 
+# Test file
+test_plot.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

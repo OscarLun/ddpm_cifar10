@@ -67,18 +67,23 @@ def main():
         ])
     )
 
-    # Handle subset indices for training
-    subset_indices_file = "subset_indices.npy"
-    subset_indices_file = os.path.join(current_results_folder, subset_indices_file)
+    # Handle subset indices for trainin
+    subset_indices_folder = os.path.join(current_results_folder, "subset_indices")
+    subset_indices_file_train = "subset_indices_train.npy"
+    subset_indices_file_fid = "subset_indices_fid.npy"
+    subset_indices_file_train = os.path.join(subset_indices_folder, subset_indices_file_train)
+    subset_indices_file_fid = os.path.join(subset_indices_folder, subset_indices_file_fid)
 
-    if os.path.exists(subset_indices_file) and config["trainer_params"]["load_path"] is not None:
+    if os.path.exists(subset_indices_folder) and config["trainer_params"]["load_path"] is not None:
         # Load existing subset indices
-        subset_indices = np.load(subset_indices_file)
-        print(f"Loaded subset indices from {subset_indices_file}")
+        subset_indices_train = np.load(subset_indices_file_train)
+        subset_indices_fid = np.load(subset_indices_file_fid)
+        print(f"Loaded subset indices from {subset_indices_folder}")
     else:
         # Generate new subset indices and save them
-        subset_indices = np.random.choice(len(train_data), size=subset_size, replace=False)
-        np.save(subset_indices_file, subset_indices)
+        subset_indices_train = np.random.choice(len(train_data), size=subset_size, replace=False)
+        subset_indices_test = np.random.choice(len(test_data), size=config["trainer_params"]["num_train_fid_samples"], replace=False)
+        np.save(subset_indices_file_train, subset_indices_train)
         print(f"Saved new subset indices to {subset_indices_file}")
 
     # Initialize U-Net model
