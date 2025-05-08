@@ -108,6 +108,7 @@ def main():
         model,
         image_size=diffusion_config["image_size"],
         timesteps=diffusion_config["timesteps"],
+        sampling_timesteps=diffusion_config["sampling_timesteps"],
         beta_schedule=diffusion_config["beta_schedule"],
         device=device,
     )
