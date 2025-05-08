@@ -23,6 +23,9 @@ def main():
                         help="Experiment name for logging (default: ddpm_cifar10)")
     parser.add_argument("--mode", type=str, default="train", choices=["train", "test"],
                         help="Mode to run the script in (default: train)")
+    parser.add_argument("--subset_size", type=int, default=None,
+                        help="Subset size for training (default: None, will use config value)")
+
     args = parser.parse_args()
 
     # Set the device
@@ -38,7 +41,14 @@ def main():
     # Load data folder
     data_folder = config["trainer_params"]["folder"]
 
-    subset_size = config["subset_params"]["subset_size"]
+    # Check if subset size is provided, otherwise use the config value
+    if args.subset_size is not None:
+        subset_size = args.subset_size
+    else:
+        if "subset_size" in config["subset_params"]:
+            subset_size = config["subset_params"]["subset_size"]
+        else:
+            raise ValueError("No subset size provided. Please specify a subset size in the command line or in the config file.")
 
     # Create a folder for results
     results_folder=trainer_config["results_folder"]
