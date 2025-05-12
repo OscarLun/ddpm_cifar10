@@ -9,10 +9,38 @@ import os
 from models.unet import Unet
 from diffusion.gaussian_diffusion import GaussianDiffusion
 from trainers.trainer import Trainer
+from nearest_neighbor import NearestNeighborEvaluator
 
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import Compose, ToTensor
 from torch.utils.data import Subset
+from torch.utils.data import DataLoader
+
+def evaluate_diversity(model, device, num_samples, real_data, batch_size=128):
+    """
+    Evaluate the diversity of generated samples Nearest Neighbor distance.
+    """
+    dl = DataLoader(real_data, batch_size=batch_size, shuffle=False)
+    real_images = []
+    for images, _ in dl:
+
+        # Might need conversion to [-1, 1] range or opposite
+        real_images.append(images)
+    real_images = torch.cat(real_images).to(device)
+
+    nn_eval = NearestNeighborEvaluator(device=device, n_neighbors=5)
+    nn_eval.fit_database(real_images)
+
+    # Generate samples
+    fake_images = model.sample(num_samples=num_samples, batch_size=batch_size).to(device)
+
+    nn_eval.save_nearest_neighbors(
+        generated_images=fake_images,
+        real_images=real_images,
+        save_path="nearest_neighbors",
+        n_examples=10,
+    )
+
 
 def main():
     # Parse command line arguments
@@ -21,7 +49,7 @@ def main():
                         help="Device to use for training (default: cuda)")
     parser.add_argument("--exp_name", type=str, default="ddpm_cifar10",
                         help="Experiment name for logging (default: ddpm_cifar10)")
-    parser.add_argument("--mode", type=str, default="train", choices=["train", "test"],
+    parser.add_argument("--mode", type=str, default="train", choices=["train", "test", "nn_eval"],
                         help="Mode to run the script in (default: train)")
     parser.add_argument("--subset_size", type=int, default=None,
                         help="Subset size for training (default: None, will use config value)")
@@ -154,7 +182,6 @@ def main():
         num_train_fid_samples=trainer_config["num_train_fid_samples"],
         num_test_fid_samples=trainer_config["num_test_fid_samples"],
         calculate_fid=True,
-        load_milestone=trainer_config["load_milestone"],
         load_path=trainer_config["load_path"],
         load_from_config=trainer_config["load_from_config"],
         save_best_and_latest_only=True,
@@ -164,6 +191,12 @@ def main():
         # Test mode
         trainer.test(save_samples=True)
         print("Testing completed.")
+
+    elif args.mode == "nn_eval":
+        # Nearest Neighbor evaluation
+        num_samples = 10
+        batch_size = trainer_config["train_batch_size"]
+        evaluate_diversity(diffusion, device, num_samples, train_dataset, batch_size)
 
     else:
 

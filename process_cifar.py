@@ -100,4 +100,6 @@ def process_cifar(overwrite_subset=False, overwrite_fid=False):
         print(f"Saved FID test subset indices to {fid_indices_file}")
 
 if __name__ == "__main__":
+
+    np.random.seed(42)  # Set a random seed for reproducibility
     process_cifar()

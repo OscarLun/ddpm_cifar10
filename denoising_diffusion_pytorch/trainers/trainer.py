@@ -61,7 +61,6 @@ class Trainer:
         save_best_and_latest_only = False,
         wandb_logger,
         device = torch.device('cpu'),
-        load_milestone = 0,
         load_path = None,
         load_from_config = False,
     ):
@@ -137,9 +136,6 @@ class Trainer:
 
         self.model, self.opt = self.accelerator.prepare(self.model, self.opt)
 
-        # load milestone
-        self.load_milestone = load_milestone
-
         # load path
         self.load_path = load_path
 
@@ -147,8 +143,8 @@ class Trainer:
         self.load_from_config = load_from_config
 
         # load model if milestone is provided
-        if self.load_milestone > 0:
-            self.load(self.load_milestone, load_path = self.load_path)
+        if self.load_from_config:
+            self.load(load_path = self.load_path)
 
 
         # FID-score computation
@@ -222,7 +218,7 @@ class Trainer:
                 previous_checkpoint_path.unlink()  # Deletes the file
             
 
-    def load(self, milestone, load_path=None):
+    def load(self, load_path=None):
         if not self.load_from_config:
             return
 
@@ -232,9 +228,9 @@ class Trainer:
         try: 
             # Either load from the specified path or the default path
             if load_path is not None:
-                data_path = Path(load_path) / f'model-{milestone}.pt'
+                data_path = Path(load_path)
             else:
-                data_path = self.results_folder / f'model-{milestone}.pt'
+                data_path = self.results_folder / f'model-best.pt'
 
             # Check if the file exists
             if not data_path.exists():
