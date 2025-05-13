@@ -80,47 +80,29 @@ class NearestNeighborEvaluator:
     #     return images
 
     def load_or_precalc_database_features(self, cache_filename="database_stats.npz"):
-        """
-        Loads pre-calculated database features from disk if available. Otherwise,
-        extracts Inception features from n_samples real images (using the provided dataloader),
-        stacks them, caches to disk, and returns them.
+        cache_filename = os.path.join(self.stats_dir, cache_filename)
+        os.makedirs(self.stats_dir, exist_ok=True)
 
-        Parameters:
-            dl: DataLoader which yields batches of real images.
-            n_samples: Total number of samples to process.
-            batch_size: Batch size of the DataLoader.
-            cache_filename: Filename (including path) to cache the features.
-        Returns:
-            stacked_features: numpy array of shape (n_samples, feature_dim)
-        """
         if os.path.exists(cache_filename):
             ckpt = np.load(cache_filename)
             stacked_features = ckpt["features"]
             print(f"Database features loaded from {cache_filename}.")
             ckpt.close()
         else:
-            n_samples = len(self.dl.dataset) 
-            num_batches = int(math.ceil(n_samples / self.batch_size))
             stacked_features_list = []
-            print(f"Extracting Inception features for {n_samples} real images...")
-            for _ in tqdm(range(num_batches)):
-                try:
-                    images = next(iter(self.dl))
-                except StopIteration:
-                    break
+            print(f"Extracting Inception features for real images...")
+            for images in tqdm(self.dl):
                 images = images.to(self.device)
                 features = self.extract_features(images)
-                # Convert to tensor then to numpy for stacking
-                features_tensor = torch.tensor(features)
-                stacked_features_list.append(features_tensor)
-            # Concatenate along first dimension and keep only first n_samples rows.
-            stacked_features = torch.cat(stacked_features_list, dim=0)[:n_samples].cpu().numpy()
+                stacked_features_list.append(torch.tensor(features))
+
+            stacked_features = torch.cat(stacked_features_list, dim=0).cpu().numpy()
             np.savez_compressed(cache_filename, features=stacked_features)
             print(f"Database features cached to {cache_filename}.")
-        # Cache the features in the instance for later use.
+
         self.database_features = stacked_features
         return stacked_features
-    
+        
     def extract_features(self, samples):
         """
         Extract feature representations from images using InceptionV3.
@@ -168,57 +150,39 @@ class NearestNeighborEvaluator:
         distances, _ = self.find_nearest(generated_images)
         return np.mean(distances)
     
+    def save_nearest_neighbors(self, generated_images, save_path="nearest_neighbors.png", n_examples=10):
+        real_images = self.ds
 
-    def save_nearest_neighbors(self, generated_images, real_images, save_path="nearest_neighbor.png", n_examples=10):
-        """
-        For the first n_examples in generated_images, finds the 5 nearest real images (from real_images)
-        and saves a grid image with each row containing the generated image as the leftmost column
-        and its nearest neighbors to the right.
-        
-        Parameters:
-            generated_images: torch.Tensor (M, C, H, W).
-            real_images: torch.Tensor (N, C, H, W). The real images used for the nearest neighbor database.
-            save_path: Path where the PNG image will be saved.
-            n_examples: Number of generated images (rows) to display.
-        """
-        # Ensure we have fitted the database.
         if self.neighbor_model is None:
-            raise ValueError("Please fit the neighbor model with real images via fit_database() first.")
+            raise ValueError("Please fit the neighbor model first.")
         
-        # Get nearest neighbor distances and indices for the generated images.
         distances, indices = self.find_nearest(generated_images)
         
-        # Convert images from [-1,1] to [0,1] for display, might need to be adjusted
         def convert(img_tensor):
-            return (img_tensor + 1) / 2
-        
-        # Limit to the first n_examples
+            return img_tensor  # CIFAR10 already in [0,1]
+
         gen_imgs = generated_images[:n_examples]
-        nn_indices = indices[:n_examples]  # shape (n_examples, n_neighbors)
+        nn_indices = indices[:n_examples]
         n_neighbors = nn_indices.shape[1]
-        
-        # Create a matplotlib grid with n_examples rows and (n_neighbors + 1) columns.
+
         fig, axes = plt.subplots(n_examples, n_neighbors + 1, figsize=((n_neighbors+1)*2, n_examples*2))
-        
-        # If only one row, axes might not be a 2D array
+
         if n_examples == 1:
             axes = np.expand_dims(axes, 0)
-        
+
         for i in range(n_examples):
-            # Plot the generated image in the leftmost column.
             gen_img = convert(gen_imgs[i]).cpu().permute(1, 2, 0).numpy()
             axes[i, 0].imshow(gen_img.clip(0, 1))
             axes[i, 0].set_title("Generated")
             axes[i, 0].axis("off")
-            
-            # For each nearest neighbor, plot the corresponding real image.
+
             for j in range(n_neighbors):
                 real_idx = nn_indices[i, j]
                 real_img = convert(real_images[real_idx]).cpu().permute(1, 2, 0).numpy()
                 axes[i, j + 1].imshow(real_img.clip(0, 1))
                 axes[i, j + 1].set_title(f"NN {j+1}")
                 axes[i, j + 1].axis("off")
-        
+
         plt.tight_layout()
         plt.savefig(save_path)
         plt.close(fig)

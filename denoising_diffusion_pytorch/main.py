@@ -5,6 +5,7 @@ import wandb
 import time
 import numpy as np
 import os
+import random
 
 from models.unet import Unet
 from diffusion.gaussian_diffusion import GaussianDiffusion
@@ -20,23 +21,26 @@ def evaluate_diversity(model, device, num_samples, real_data, batch_size=128):
     """
     Evaluate the diversity of generated samples Nearest Neighbor distance.
     """
-    dl = DataLoader(real_data, batch_size=batch_size, shuffle=False)
-    real_images = []
-    for images, _ in dl:
+    # dl = DataLoader(real_data, batch_size=batch_size, shuffle=False)
+    # real_images = []
+    # for images, _ in dl:
 
-        # Might need conversion to [-1, 1] range or opposite
-        real_images.append(images)
-    real_images = torch.cat(real_images).to(device)
+    #     real_images.append(images)
+    # real_images = torch.cat(real_images).to(device)
 
     nn_eval = NearestNeighborEvaluator(device=device, n_neighbors=5, real_images=real_data)
     nn_eval.fit_database()
 
     # Generate samples
-    fake_images = model.sample(batch_size=batch_size).to(device)
+    # fake_images = model.sample(batch_size=batch_size).to(device)
+
+    # For testing we will use the real images as fake images
+    indices = random.sample(range(len(real_data)), 10)
+    # Extract images from those indices and stack them
+    fake_images = torch.stack([real_data[i][0] for i in indices]).to(device)
 
     nn_eval.save_nearest_neighbors(
         generated_images=fake_images,
-        real_images=real_images,
         save_path="nearest_neighbors",
         n_examples=10,
     )
@@ -130,6 +134,16 @@ def main():
     # Subset dataset 
     train_dataset = Subset(train_data, subset_indices_train)
     test_dataset = Subset(test_data, subset_indices_fid)
+
+    if args.mode == "nn_eval":
+        evaluate_diversity(
+            model=None,
+            device=device,
+            num_samples=10,
+            real_data=train_dataset,
+            batch_size=trainer_config["train_batch_size"],
+        )
+        return
     
     # Initialize U-Net model
     unet_config = config['unet_params']
