@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#SBATCH -A NAISS2025-22-312         # Project identifier; replace with the project you’re using
+#SBATCH -p alvis                    # Use the Alvis partition (queue)
+#SBATCH -N 1 --gpus-per-node=A40:1  # Request 1 node with 1 Nvidia T4 GPU (adjust if needed)
+#SBATCH -n 1                        # Request one task (since we’re not using MPI here)
+#SBATCH -t 0-10:00:00               # Set a walltime of 4 hours (adjust based on your training needs)
+#SBATCH -J 1000_ddpm_train            # Name of the job
+#SBATCH -o 1000_ddpm_train_%j.out     # Redirect output to a file with the job ID in the name
+echo "Starting DDPM job at $(date)"
+apptainer exec cifar.sif python denoising_diffusion_pytorch/main.py --subset_size 1000

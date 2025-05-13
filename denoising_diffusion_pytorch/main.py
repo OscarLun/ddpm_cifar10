@@ -28,11 +28,11 @@ def evaluate_diversity(model, device, num_samples, real_data, batch_size=128):
         real_images.append(images)
     real_images = torch.cat(real_images).to(device)
 
-    nn_eval = NearestNeighborEvaluator(device=device, n_neighbors=5)
-    nn_eval.fit_database(real_images)
+    nn_eval = NearestNeighborEvaluator(device=device, n_neighbors=5, real_images=real_data)
+    nn_eval.fit_database()
 
     # Generate samples
-    fake_images = model.sample(num_samples=num_samples, batch_size=batch_size).to(device)
+    fake_images = model.sample(batch_size=batch_size).to(device)
 
     nn_eval.save_nearest_neighbors(
         generated_images=fake_images,
@@ -87,7 +87,7 @@ def main():
     else:
         current_results_folder = f"{results_folder}/{subset_size}_{current_time}"
 
-    os.makedirs(current_results_folder, exist_ok=True)
+    #os.makedirs(current_results_folder, exist_ok=True)
 
     # Load CIFAR-10 dataset
     train_data = CIFAR10(
@@ -194,9 +194,10 @@ def main():
 
     elif args.mode == "nn_eval":
         # Nearest Neighbor evaluation
+        model = trainer.get_ema_model()
         num_samples = 10
         batch_size = trainer_config["train_batch_size"]
-        evaluate_diversity(diffusion, device, num_samples, train_dataset, batch_size)
+        evaluate_diversity(model, device, num_samples, train_dataset, batch_size)
 
     else:
 

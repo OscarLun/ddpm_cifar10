@@ -105,7 +105,7 @@ class NearestNeighborEvaluator:
             print(f"Extracting Inception features for {n_samples} real images...")
             for _ in tqdm(range(num_batches)):
                 try:
-                    images, _ = next(iter(self.dl))
+                    images = next(iter(self.dl))
                 except StopIteration:
                     break
                 images = images.to(self.device)

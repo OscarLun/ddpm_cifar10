@@ -15,6 +15,8 @@ dependencies:
   - numpy<2
   - pillow
   - scipy
+  - scikit-learn
+  - matplotlib
   - tqdm
   - pip
   - pip:

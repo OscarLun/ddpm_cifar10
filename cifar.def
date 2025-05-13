@@ -1,0 +1,12 @@
+Bootstrap: docker
+From: quay.io/condaforge/miniforge3:24.3.0-0
+
+%files
+    environment.yaml
+
+%post
+     # Update conda to the latest version
+    /opt/conda/bin/conda update -n base -c conda-forge conda -y
+   
+    /opt/conda/bin/conda env update --name base --file environment.yaml --prune
+    

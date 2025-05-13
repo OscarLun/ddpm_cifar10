@@ -126,7 +126,7 @@ class Trainer:
 
         # for logging results in a folder periodically
         self.results_folder = Path(results_folder)
-        self.results_folder.mkdir(exist_ok = True)
+        #self.results_folder.mkdir(exist_ok = True)
 
         # step counter state
 
@@ -365,4 +365,7 @@ class Trainer:
             f.write(f"FID Score: {fid_score}\n")
 
         self.accelerator.print(f'fid_score: {fid_score}')
+
+    def get_ema_model(self):
+        return self.ema.ema_model
     
