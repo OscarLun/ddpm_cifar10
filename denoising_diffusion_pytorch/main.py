@@ -21,7 +21,6 @@ def evaluate_diversity(model, device, num_samples, real_data, batch_size=128):
     """
     Evaluate the diversity of generated samples Nearest Neighbor distance.
     """
-
     nn_eval = NearestNeighborEvaluator(device=device, n_neighbors=5, real_images=real_data)
     nn_eval.fit_database()
 

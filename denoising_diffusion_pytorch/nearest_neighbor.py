@@ -52,6 +52,8 @@ class NearestNeighborEvaluator:
         self.ds = DatasetNoLabels(real_images)
         self.dl = DataLoader(self.ds, batch_size=batch_size, shuffle=False)
 
+        self.data_size = len(self.ds)
+
         # Load InceptionV3 pretrained on ImageNet.
         assert inception_block_idx in InceptionV3.BLOCK_INDEX_BY_DIM
         block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[inception_block_idx]
@@ -62,25 +64,9 @@ class NearestNeighborEvaluator:
         # Variable to cache stacked features if needed
         self.database_features = None
 
-    # def _preprocess(self, images):
-    #     """
-    #     Preprocess images for InceptionV3.
-    #     Assumes images is a torch.Tensor of shape (N, C, H, W) in the range [-1, 1].
-    #     Converts them to [0, 1], resizes to 299x299, and applies standard InceptionV3 normalization.
-    #     """
-    #     # Convert from [-1,1] to [0,1]
-    #     images = (images + 1) / 2
-    #     # Resize images to 299 x 299 (InceptionV3 input size)
-    #     images = F.interpolate(images, size=(299, 299), mode='bilinear', align_corners=False)
-    #     # Apply the standard InceptionV3 normalization:
-    #     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-    #                                      std=[0.229, 0.224, 0.225])
-    #     # Normalize each image in the batch
-    #     images = torch.stack([normalize(img) for img in images])
-    #     return images
 
     def load_or_precalc_database_features(self, cache_filename="database_stats.npz"):
-        cache_filename = os.path.join(self.stats_dir, cache_filename)
+        cache_filename = os.path.join(self.stats_dir, self.data_size ,cache_filename)
         os.makedirs(self.stats_dir, exist_ok=True)
 
         if os.path.exists(cache_filename):
