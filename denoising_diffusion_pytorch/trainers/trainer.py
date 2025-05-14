@@ -342,27 +342,27 @@ class Trainer:
     def test(self, save_samples = False): 
         from fid_evaluation import FIDEvaluation
 
-        if self.num_train_fid_samples > len(self.ds):
-            self.num_fid_samples = len(self.ds)
+        stats_dir = Path("./results/test_data")
+        stats_dir.mkdir(exist_ok=True)
 
         fid_scorer_test = FIDEvaluation(
         batch_size=self.batch_size,
-        dl=self.dl, # NEED UPDATE
+        dl=self.test_dl, 
         sampler=self.ema.ema_model,
         channels=self.channels,
         accelerator=self.accelerator,
-        stats_dir=self.results_folder, # NEED UPDATE
+        stats_dir=stats_dir, 
         device=self.device,
-        num_fid_samples=self.num_fid_samples,
+        num_fid_samples=self.num_test_fid_samples,
         inception_block_idx=self.inception_block_idx
         )
         
         fid_score = fid_scorer_test.fid_score(save_samples=save_samples)
 
         # Save the FID score to a file in the results folder
-        fid_score_file = self.results_folder / "fid_score.txt"
-        with open(fid_score_file, "w") as f:
-            f.write(f"FID Score: {fid_score}\n")
+        fid_score_file = self.fid_score_file
+        with open(fid_score_file, "a") as f:
+            f.write(f"Final FID Score (10,000 images): {fid_score}\n")
 
         self.accelerator.print(f'fid_score: {fid_score}')
 

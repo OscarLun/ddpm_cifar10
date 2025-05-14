@@ -180,7 +180,7 @@ def main():
 
     if args.mode == "test":
         # Test mode
-        trainer.test(save_samples=True)
+        trainer.test()
         print("Testing completed.")
 
     elif args.mode == "nn_eval":
