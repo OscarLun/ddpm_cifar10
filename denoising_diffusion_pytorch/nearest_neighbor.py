@@ -141,7 +141,6 @@ class NearestNeighborEvaluator:
         return np.mean(distances)
     
     def save_nearest_neighbors(self, generated_images, save_path="./results", n_examples=10):
-    def save_nearest_neighbors(self, generated_images, save_path="./results", n_examples=10):
         real_images = self.ds
 
         if self.neighbor_model is None:
