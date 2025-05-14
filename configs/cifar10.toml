@@ -19,11 +19,11 @@ num_samples = 9
 results_folder = "./results"
 num_train_fid_samples = 2000
 num_test_fid_samples = 10000
-load_path = "results/1000_2025-05-08_23-17-41/model-best.pt"
+load_path = "results/25000_2025-05-08_23-17-41/model-best.pt"
 load_from_config = true
 
 [subset_params]
-subset_size = 1000
+subset_size = 25000
 subset_sizes = [1000, 25000, 50000]
 num_train_fid_samples = 2000
 

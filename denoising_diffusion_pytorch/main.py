@@ -29,7 +29,6 @@ def evaluate_diversity(model, device, num_samples, real_data, batch_size=128):
 
     nn_eval.save_nearest_neighbors(
         generated_images=fake_images,
-        save_path="nearest_neighbors",
         n_examples=10,
     )
 
@@ -115,9 +114,9 @@ def main():
     else:
         raise FileNotFoundError(f"Subset indices files not found in {subset_indices_folder}. Please generate them first.")
 
-    # Check if the subset size is valid
-    if subset_size not in config["subset_params"]["subset_sizes"]:
-        raise ValueError(f"Subset size {subset_size} is not valid. Please choose from {config['subset_params']['subset_sizes']}.")
+    # # Check if the subset size is valid
+    # if subset_size not in config["subset_params"]["subset_sizes"]:
+    #     raise ValueError(f"Subset size {subset_size} is not valid. Please choose from {config['subset_params']['subset_sizes']}.")
     
     # Subset dataset 
     train_dataset = Subset(train_data, subset_indices_train)
