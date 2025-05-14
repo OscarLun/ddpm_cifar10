@@ -29,7 +29,6 @@ def evaluate_diversity(model, device, num_samples, real_data, batch_size=128):
 
     nn_eval.save_nearest_neighbors(
         generated_images=fake_images,
-        save_path="nearest_neighbors",
         n_examples=10,
     )
 

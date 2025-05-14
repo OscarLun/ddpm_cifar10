@@ -136,7 +136,7 @@ class NearestNeighborEvaluator:
         distances, _ = self.find_nearest(generated_images)
         return np.mean(distances)
     
-    def save_nearest_neighbors(self, generated_images, save_path="nearest_neighbors.png", n_examples=10):
+    def save_nearest_neighbors(self, generated_images, save_path="./results", n_examples=10):
         real_images = self.ds
 
         if self.neighbor_model is None:
@@ -144,6 +144,7 @@ class NearestNeighborEvaluator:
         
         distances, indices = self.find_nearest(generated_images)
         
+        save_path = os.path.join(save_path, self.data_size, "nearest_neighbors.png")
         def convert(img_tensor):
             return img_tensor  # CIFAR10 already in [0,1]
 
