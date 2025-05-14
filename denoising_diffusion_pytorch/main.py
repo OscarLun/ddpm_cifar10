@@ -114,9 +114,9 @@ def main():
     else:
         raise FileNotFoundError(f"Subset indices files not found in {subset_indices_folder}. Please generate them first.")
 
-    # Check if the subset size is valid
-    if subset_size not in config["subset_params"]["subset_sizes"]:
-        raise ValueError(f"Subset size {subset_size} is not valid. Please choose from {config['subset_params']['subset_sizes']}.")
+    # # Check if the subset size is valid
+    # if subset_size not in config["subset_params"]["subset_sizes"]:
+    #     raise ValueError(f"Subset size {subset_size} is not valid. Please choose from {config['subset_params']['subset_sizes']}.")
     
     # Subset dataset 
     train_dataset = Subset(train_data, subset_indices_train)

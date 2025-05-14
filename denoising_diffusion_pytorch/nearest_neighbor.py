@@ -65,14 +65,18 @@ class NearestNeighborEvaluator:
         self.database_features = None
 
 
-    def load_or_precalc_database_features(self, cache_filename="database_stats.npz"):
-        cache_filename = os.path.join(self.stats_dir, self.data_size ,cache_filename)
-        os.makedirs(self.stats_dir, exist_ok=True)
+    def load_or_precalc_database_features(self, cache_directory="database_stats"):
+        cache_dir = os.path.join(self.stats_dir, cache_directory)
+        os.makedirs(cache_dir, exist_ok=True)
 
-        if os.path.exists(cache_filename):
-            ckpt = np.load(cache_filename)
+        cache_filename = f"{self.data_size}_stats.npz"
+
+        cache_path = os.path.join(cache_dir, cache_filename)
+
+        if os.path.exists(cache_path):
+            ckpt = np.load(cache_path)
             stacked_features = ckpt["features"]
-            print(f"Database features loaded from {cache_filename}.")
+            print(f"Database features loaded from {cache_path}.")
             ckpt.close()
         else:
             stacked_features_list = []
@@ -83,8 +87,8 @@ class NearestNeighborEvaluator:
                 stacked_features_list.append(torch.tensor(features))
 
             stacked_features = torch.cat(stacked_features_list, dim=0).cpu().numpy()
-            np.savez_compressed(cache_filename, features=stacked_features)
-            print(f"Database features cached to {cache_filename}.")
+            np.savez_compressed(cache_path, features=stacked_features)
+            print(f"Database features cached to {cache_path}.")
 
         self.database_features = stacked_features
         return stacked_features
@@ -137,14 +141,20 @@ class NearestNeighborEvaluator:
         return np.mean(distances)
     
     def save_nearest_neighbors(self, generated_images, save_path="./results", n_examples=10):
+    def save_nearest_neighbors(self, generated_images, save_path="./results", n_examples=10):
         real_images = self.ds
 
         if self.neighbor_model is None:
             raise ValueError("Please fit the neighbor model first.")
         
         distances, indices = self.find_nearest(generated_images)
-        
-        save_path = os.path.join(save_path, self.data_size, "nearest_neighbors.png")
+
+        save_dir = os.path.join(save_path, "nearest_neighbors")
+        os.makedirs(save_dir, exist_ok=True)
+
+        save_filename = f"{self.data_size}_nn.png"
+        save_path = os.path.join(save_dir, save_filename)
+
         def convert(img_tensor):
             return img_tensor  # CIFAR10 already in [0,1]
 
@@ -171,5 +181,7 @@ class NearestNeighborEvaluator:
                 axes[i, j + 1].axis("off")
 
         plt.tight_layout()
+
+        print(f"Nearest Neihbors saved to {save_path}.")
         plt.savefig(save_path)
         plt.close(fig)
