@@ -8,7 +8,7 @@ wandb/
 data/
 
 # Config files
-#config/
+config/
 
 # Test file
 test_plot.py
