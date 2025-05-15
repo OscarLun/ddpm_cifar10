@@ -91,7 +91,8 @@ def main():
     current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
 
     if trainer_config["load_from_config"]:
-        current_results_folder = trainer_config["load_path"]
+        # Get parent folder of the load path
+        current_results_folder = os.path.dirname(trainer_config["load_path"])
     else:
         current_results_folder = f"{results_folder}/{subset_size}_{current_time}"
 
@@ -133,7 +134,12 @@ def main():
 
     # Subset dataset 
     train_dataset = Subset(train_data, subset_indices_train)
-    test_dataset = Subset(test_data, subset_indices_fid)
+
+    if args.mode == "test":
+        # Use entire test dataset for testing
+        test_dataset = test_data
+    else:
+        test_dataset = Subset(test_data, subset_indices_fid)
     
     # Initialize U-Net model
     unet_config = config['unet_params']

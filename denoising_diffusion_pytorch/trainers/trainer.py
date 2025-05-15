@@ -360,7 +360,7 @@ class Trainer:
 
         accelerator.print('training complete')
 
-    def test(self, save_samples = False): 
+    def test(self): 
         from fid_evaluation import FIDEvaluation
 
         stats_dir = Path("./results/test_data")
@@ -378,7 +378,7 @@ class Trainer:
         inception_block_idx=self.inception_block_idx
         )
         
-        fid_score = fid_scorer_test.fid_score(save_samples=save_samples)
+        fid_score = fid_scorer_test.fid_score()
 
         # Save the FID score to a file in the results folder
         fid_score_file = self.fid_score_file
