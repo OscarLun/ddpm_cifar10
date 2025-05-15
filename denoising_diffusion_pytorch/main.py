@@ -191,7 +191,9 @@ def main():
         evaluate_diversity(model, device, num_samples, train_dataset, batch_size)
 
     else:
-
+        
+        # Create results folder
+        os.makedirs(current_results_folder, exist_ok=True)
         # Start training
         if trainer_config["load_from_config"]:
             print("Continue training from time step = ", trainer_config["load_milestone"])

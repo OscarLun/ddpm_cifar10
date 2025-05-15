@@ -47,7 +47,7 @@ class Trainer:
         ema_decay = 0.995,
         adam_betas = (0.9, 0.99),
         save_and_sample_every = 1000,
-        validate_every = 10,
+        validate_every = 50,
         num_samples = 25,
         results_folder = './results',
         amp = False,
@@ -345,7 +345,7 @@ class Trainer:
                             loss = self.model(batch)
                             val_loss += loss.item()
                             n_val += 1
-                            if n_val >= 10:
+                            if n_val >= 5:
                                 break
 
                     val_loss /= n_val
@@ -354,7 +354,7 @@ class Trainer:
                     }
                     log_dict.update(loss_dict_val)
 
-                # Log to wandb
+                #Log to wandb
                 self.wandb_logger.log(log_dict)
                 pbar.update(1)
 
