@@ -44,6 +44,10 @@ def main():
                         help="Mode to run the script in (default: train)")
     parser.add_argument("--subset_size", type=int, default=None,
                         help="Subset size for training (default: None, will use config value)")
+    parser.add_argument("--train_steps", type=int, default=None,
+                        help="Number of training steps (default: None, will use config value)")
+    
+
 
     args = parser.parse_args()
 
@@ -68,6 +72,19 @@ def main():
             subset_size = config["subset_params"]["subset_size"]
         else:
             raise ValueError("No subset size provided. Please specify a subset size in the command line or in the config file.")
+        
+    # Check if training steps are provided, otherwise use the config value
+    if args.train_steps is not None:
+        train_steps = args.train_steps
+        save_and_sample_every = train_steps // subset_size
+    else:
+        save_and_sample_every = config["trainer_params"]["save_and_sample_every"]
+        if "train_num_steps" in config["trainer_params"]:
+            train_steps = config["trainer_params"]["train_num_steps"]
+        else:
+            raise ValueError("No training steps provided. Please specify training steps in the command line or in the config file.")
+        
+
 
     # Create a folder for results
     results_folder=trainer_config["results_folder"]
@@ -114,10 +131,6 @@ def main():
     else:
         raise FileNotFoundError(f"Subset indices files not found in {subset_indices_folder}. Please generate them first.")
 
-    # # Check if the subset size is valid
-    # if subset_size not in config["subset_params"]["subset_sizes"]:
-    #     raise ValueError(f"Subset size {subset_size} is not valid. Please choose from {config['subset_params']['subset_sizes']}.")
-    
     # Subset dataset 
     train_dataset = Subset(train_data, subset_indices_train)
     test_dataset = Subset(test_data, subset_indices_fid)
@@ -164,8 +177,8 @@ def main():
         folder=trainer_config["folder"],
         train_batch_size=trainer_config["train_batch_size"],
         train_lr=trainer_config["train_lr"],
-        train_num_steps=trainer_config["train_num_steps"],
-        save_and_sample_every=trainer_config["save_and_sample_every"],
+        train_num_steps=train_steps,
+        save_and_sample_every=save_and_sample_every,
         num_samples=trainer_config["num_samples"],
         results_folder=current_results_folder,
         wandb_logger=wandb_logger,
