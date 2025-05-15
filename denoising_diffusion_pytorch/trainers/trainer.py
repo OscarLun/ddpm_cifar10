@@ -47,6 +47,7 @@ class Trainer:
         ema_decay = 0.995,
         adam_betas = (0.9, 0.99),
         save_and_sample_every = 1000,
+        validate_every = 10,
         num_samples = 25,
         results_folder = './results',
         amp = False,
@@ -176,6 +177,7 @@ class Trainer:
             assert calculate_fid, "`calculate_fid` must be True to provide a means for model evaluation for `save_best_and_latest_only`."
             self.best_fid = 1e10 # infinite
 
+        self.validate_every = validate_every
         self.save_best_and_latest_only = save_best_and_latest_only
         self.num_train_fid_samples = num_train_fid_samples
         self.num_test_fid_samples = num_test_fid_samples
@@ -332,6 +334,25 @@ class Trainer:
                             self.save("latest")
                         else:
                             self.save(milestone)
+
+                if self.step % self.validate_every == 0:
+                    self.model.eval()
+                    val_loss = 0.
+                    n_val = 0
+                    with torch.no_grad():
+                        for data in self.test_dl:
+                            batch = data.to(device)
+                            loss = self.model(batch)
+                            val_loss += loss.item()
+                            n_val += 1
+                            if n_val >= 10:
+                                break
+
+                    val_loss /= n_val
+                    loss_dict_val = {
+                        'val_loss': val_loss
+                    }
+                    log_dict.update(loss_dict_val)
 
                 # Log to wandb
                 self.wandb_logger.log(log_dict)
