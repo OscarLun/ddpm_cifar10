@@ -387,6 +387,18 @@ class Trainer:
 
         self.accelerator.print(f'fid_score: {fid_score}')
 
+    def sample(self):
+        print(f"Sampling {self.num_samples} samples")
+        with torch.inference_mode():
+            batches = num_to_groups(self.num_samples, self.batch_size)
+            all_images_list = list(map(lambda n: self.ema.ema_model.sample(batch_size=n), batches))
+
+        all_images = torch.cat(all_images_list, dim = 0)
+
+        save_path = str(self.results_folder / f'samples-{self.num_samples}.png')
+        utils.save_image(all_images, save_path, nrow = int(math.sqrt(self.num_samples)))
+        print(f"Samples saved to {save_path}")
+
     def get_ema_model(self):
         return self.ema.ema_model
     

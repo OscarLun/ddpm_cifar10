@@ -40,7 +40,7 @@ def main():
                         help="Device to use for training (default: cuda)")
     parser.add_argument("--exp_name", type=str, default="ddpm_cifar10",
                         help="Experiment name for logging (default: ddpm_cifar10)")
-    parser.add_argument("--mode", type=str, default="train", choices=["train", "test", "nn_eval"],
+    parser.add_argument("--mode", type=str, default="train", choices=["train", "test", "nn_eval", "sample"],
                         help="Mode to run the script in (default: train)")
     parser.add_argument("--subset_size", type=int, default=None,
                         help="Subset size for training (default: None, will use config value)")
@@ -88,6 +88,7 @@ def main():
     # Check if model path is provided
     if args.model_path is not None:
         load_path = args.model_path
+        trainer["load_from_config"] = True
     else:
         load_path = trainer_config["load_path"]
 
@@ -213,6 +214,12 @@ def main():
         num_samples = 10
         batch_size = trainer_config["train_batch_size"]
         evaluate_diversity(model, device, num_samples, train_dataset, batch_size)
+
+    elif args.mode == "sample":
+        if not trainer_config["load_from_config"]:
+            raise ValueError("No path to pretrained model given")
+
+        trainer.sample()
 
     else:
         
