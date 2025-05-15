@@ -47,7 +47,7 @@ class Trainer:
         ema_decay = 0.995,
         adam_betas = (0.9, 0.99),
         save_and_sample_every = 1000,
-        validate_every=10,
+        validate_every = 50,
         num_samples = 25,
         results_folder = './results',
         amp = False,
@@ -106,14 +106,14 @@ class Trainer:
 
         assert len(self.ds) >= 100, 'you should have at least 100 images in your folder. at least 10k images recommended'
 
-        dl = DataLoader(self.ds, batch_size = train_batch_size, shuffle = True, pin_memory = True, num_workers = cpu_count())
+        dl = DataLoader(self.ds, batch_size = train_batch_size, shuffle = True, pin_memory = True, num_workers = 16)
         dl = self.accelerator.prepare(dl)
         self.dl = cycle(dl)
 
         self.test_ds = DatasetNoLabels(test_data)
 
         # Create a dataloader for the test dataset
-        test_dl = DataLoader(self.test_ds, batch_size=train_batch_size, shuffle=False, pin_memory=True, num_workers=cpu_count())
+        test_dl = DataLoader(self.test_ds, batch_size=train_batch_size, shuffle=False, pin_memory=True, num_workers=16)
         test_dl = self.accelerator.prepare(test_dl)
         self.test_dl = cycle(test_dl)
 
@@ -345,13 +345,16 @@ class Trainer:
                             loss = self.model(batch)
                             val_loss += loss.item()
                             n_val += 1
+                            if n_val >= 5:
+                                break
 
                     val_loss /= n_val
                     loss_dict_val = {
                         'val_loss': val_loss
                     }
                     log_dict.update(loss_dict_val)
-                # Log to wandb
+
+                #Log to wandb
                 self.wandb_logger.log(log_dict)
                 pbar.update(1)
 
@@ -360,27 +363,27 @@ class Trainer:
     def test(self, save_samples = False): 
         from fid_evaluation import FIDEvaluation
 
-        if self.num_train_fid_samples > len(self.ds):
-            self.num_fid_samples = len(self.ds)
+        stats_dir = Path("./results/test_data")
+        stats_dir.mkdir(exist_ok=True)
 
         fid_scorer_test = FIDEvaluation(
         batch_size=self.batch_size,
-        dl=self.dl, # NEED UPDATE
+        dl=self.test_dl, 
         sampler=self.ema.ema_model,
         channels=self.channels,
         accelerator=self.accelerator,
-        stats_dir=self.results_folder, # NEED UPDATE
+        stats_dir=stats_dir, 
         device=self.device,
-        num_fid_samples=self.num_fid_samples,
+        num_fid_samples=self.num_test_fid_samples,
         inception_block_idx=self.inception_block_idx
         )
         
         fid_score = fid_scorer_test.fid_score(save_samples=save_samples)
 
         # Save the FID score to a file in the results folder
-        fid_score_file = self.results_folder / "fid_score.txt"
-        with open(fid_score_file, "w") as f:
-            f.write(f"FID Score: {fid_score}\n")
+        fid_score_file = self.fid_score_file
+        with open(fid_score_file, "a") as f:
+            f.write(f"Final FID Score (10,000 images): {fid_score}\n")
 
         self.accelerator.print(f'fid_score: {fid_score}')
 
