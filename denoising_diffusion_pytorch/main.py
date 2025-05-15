@@ -76,7 +76,7 @@ def main():
     # Check if training steps are provided, otherwise use the config value
     if args.train_steps is not None:
         train_steps = args.train_steps
-        save_and_sample_every = train_steps // subset_size
+        save_and_sample_every = train_steps // 8 # For current implementation
     else:
         save_and_sample_every = config["trainer_params"]["save_and_sample_every"]
         if "train_num_steps" in config["trainer_params"]:
