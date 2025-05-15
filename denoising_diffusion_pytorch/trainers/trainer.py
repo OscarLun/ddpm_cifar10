@@ -106,14 +106,14 @@ class Trainer:
 
         assert len(self.ds) >= 100, 'you should have at least 100 images in your folder. at least 10k images recommended'
 
-        dl = DataLoader(self.ds, batch_size = train_batch_size, shuffle = True, pin_memory = True, num_workers = cpu_count())
+        dl = DataLoader(self.ds, batch_size = train_batch_size, shuffle = True, pin_memory = True, num_workers = 16)
         dl = self.accelerator.prepare(dl)
         self.dl = cycle(dl)
 
         self.test_ds = DatasetNoLabels(test_data)
 
         # Create a dataloader for the test dataset
-        test_dl = DataLoader(self.test_ds, batch_size=train_batch_size, shuffle=False, pin_memory=True, num_workers=cpu_count())
+        test_dl = DataLoader(self.test_ds, batch_size=train_batch_size, shuffle=False, pin_memory=True, num_workers=16)
         test_dl = self.accelerator.prepare(test_dl)
         self.test_dl = cycle(test_dl)
 
