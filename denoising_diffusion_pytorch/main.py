@@ -46,9 +46,9 @@ def main():
                         help="Subset size for training (default: None, will use config value)")
     parser.add_argument("--train_steps", type=int, default=None,
                         help="Number of training steps (default: None, will use config value)")
+    parser.add_argument("--model_path", type=str, default=None,
+                        help="Path to pretrained model (default: None)")
     
-
-
     args = parser.parse_args()
 
     # Set the device
@@ -85,6 +85,11 @@ def main():
             raise ValueError("No training steps provided. Please specify training steps in the command line or in the config file.")
         
 
+    # Check if model path is provided
+    if args.model_path is not None:
+        load_path = args.model_path
+    else:
+        load_path = trainer_config["load_path"]
 
     # Create a folder for results
     results_folder=trainer_config["results_folder"]
@@ -92,7 +97,7 @@ def main():
 
     if trainer_config["load_from_config"]:
         # Get parent folder of the load path
-        current_results_folder = os.path.dirname(trainer_config["load_path"])
+        current_results_folder = os.path.dirname(load_path)
     else:
         current_results_folder = f"{results_folder}/{subset_size}_{current_time}"
 
@@ -192,7 +197,7 @@ def main():
         num_train_fid_samples=trainer_config["num_train_fid_samples"],
         num_test_fid_samples=trainer_config["num_test_fid_samples"],
         calculate_fid=True,
-        load_path=trainer_config["load_path"],
+        load_path=load_path,
         load_from_config=trainer_config["load_from_config"],
         save_best_and_latest_only=True,
     )
